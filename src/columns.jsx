@@ -34,6 +34,54 @@ export const columns = [
   },
 ];
 
+export const frameworkColumns = [
+  {
+    title: "No",
+    dataIndex: "index",
+    key: "index",
+    width: 80,
+    render: (text, record, index) => index + 1, // Renders the row number
+  },
+  {
+    title: "Epic",
+    dataIndex: "epic",
+    key: "epic",
+    width: 400,
+  },
+  {
+    title: "User Stories",
+    dataIndex: "user_story",
+    key: "user_story",
+    width: 700,
+  },
+  {
+    title: "Description",
+    dataIndex: "description",
+    key: "description",
+    width: 600,
+  },
+  {
+    title: "Status",
+    dataIndex: "status",
+    key: "status",
+    width: 200,
+  },
+  {
+    title: "Compliance",
+    dataIndex: "compliance",
+    key: "compliance",
+    width: 150,
+    render: (compliance) => compliance ? "true" : "false",
+  },
+  {
+    title: "Issues",
+    dataIndex: "issues",
+    key: "issues",
+    width: 500,
+  },
+];
+
+
 export const prioritizedColumns = [
   {
     title: "No",

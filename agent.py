@@ -1,3 +1,4 @@
+import random
 import requests
 import re
 import json
@@ -5,7 +6,115 @@ import os
 import json 
 
 OPENAI_API_KEY = os.getenv("API-KEY1")
+LLAMA_API_KEY = os.getenv("LLAMA-key1")
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
+
+
+# Load environment variables from .env file
+api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 4)]
+llama_keys = [os.getenv(f"LLAMA-key{i}") for i in range(1, 3)]
+
+def generate_check_stories_prompt(stories, framework):
+    stories_formatted = ''
+    
+    for index, story in enumerate(stories):
+        if not isinstance(story, dict):
+            print(f"Error: Story at index {index} is not a dictionary: {story}")
+            continue
+        
+        # Ensure 'status' key is handled properly
+        stories_formatted += (
+            f"- Story ID {story['key']}: "
+            f"'{story['user_story']}' "
+            f"{story['epic']} "
+            f"{story['description']} "
+            f"{story.get('status', '')}\n"
+        )
+
+    return (
+        "You are a meticulous assistant capable of evaluating user stories based on established frameworks.\n"
+        f"Given the following list of user stories, evaluate each one to ensure it adheres to the principles of the {framework} framework.\n"
+        "For each user story, provide the following details:\n"
+        "1. User Story: The original user story.\n"
+        "2. Framework: The framework used for evaluation ({framework}).\n"
+        "3. Compliance: Whether the user story complies with the framework.\n"
+        "4. Issues: If not compliant, list the specific issues.\n\n"
+        "5. Description: The original description.\n"
+        "6. Status: The original status.\n"
+        "7. Epic: The original epic.\n"
+        "Please use the following format for each evaluation:\n"
+        "### User Story X:\n"
+        "- User Story: <original_user_story>\n"
+        "- Framework: {framework}\n"
+        "- Compliance: <yes/no>\n"
+        "- Issues: <list_of_issues>\n\n"
+        "- Description: <original_description>\n"
+        "- Status: <original_status>\n"
+        "- Epic: <original_epic>\n"
+        f"{stories_formatted}"
+    )
+    
+
+def check_stories_with_framework(stories, framework, model, headers):
+    prompt = generate_check_stories_prompt(stories, framework)
+
+    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+        url = LLAMA_URL
+        headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    else:
+        url = OPENAI_URL
+        headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
+
+    # headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
+    post_data = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a meticulous assistant capable of evaluating user stories based on established frameworks."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7
+    }
+
+    response = requests.post(url, json=post_data, headers=headers)
+    if response.status_code == 200:
+        completion = response.json()
+        completion_text = completion['choices'][0]['message']['content']
+        print(completion_text)
+        checked_stories = parse_checked_stories(completion_text)
+        return checked_stories
+    else:
+        raise Exception("Failed to process the request with OpenAI")
+
+def parse_checked_stories(completion_text):
+    pattern = re.compile(
+        r"### User Story \d+:\n"
+        r"- User Story: (.*?)\n"
+        r"- Framework: (.*?)\n"
+        r"- Compliance: (.*?)\n"
+        r"- Issues: (.*?)\n"
+        r"- Description: (.*?)\n"
+        r"- Status: (.*?)\n"
+        r"- Epic: (.*?)(?=\n### User Story \d+|\Z)",
+        re.DOTALL
+    )
+
+    matches = pattern.findall(completion_text)
+    checked_stories = []
+
+    for match in matches:
+        checked_stories.append({
+            "user_story": match[0].strip(),
+            "framework": match[1].strip(),
+            "compliance": match[2].strip().lower() == 'yes',
+            "issues": match[3].strip(),
+            "description": match[4].strip(),
+            "status": match[5].strip(),
+            "epic": match[6].strip(),
+        })
+
+    return checked_stories
+
 
 def parse_prioritized_stories(completion_text):
     pattern = re.compile(
@@ -160,66 +269,54 @@ def parse_moscow_categorized_stories(completion_text):
 
     return categorized_stories
 
-
-
-def generate_stories_with_dynamic_epics(requirements, model):
-
-    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
     
-    stories_with_epics = []
+def generate_user_stories_with_epics(objective, model, headers):
+    print(objective)
 
-    for req in requirements:
-        # Constructing a conversation for each requirement to generate a story and infer an epic
-        conversation = [
-            {"role": "system", "content": "You are a helpful assistant capable of generating user stories from requirements and assigning relevant epics."},
-            {"role": "user", "content": f"Generate a user story and suggest an epic for the requirement: {req}"}
-        ]
-        
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json={"model": model, "messages": conversation, "temperature": 0.7}
-        )
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            # Assuming the last assistant message contains both the user story and a suggested epic
-            last_message = response_data['choices'][0]['message']['content']
-            # Simplified extraction, assuming the story and epic are clearly delineated in the response
-            story, suggested_epic = last_message.split('\n')[-2:]  # This is a naive split, adjust based on actual output format
-            
-            stories_with_epics.append({
-                "Requirement": req,
-                "GeneratedStory": story.strip(),
-                "SuggestedEpic": suggested_epic.strip()
-            })
-        else:
-            raise Exception("Failed to process the request with OpenAI: " + response.text)
+    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+        url = LLAMA_URL
+        headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    else:
+        url = OPENAI_URL
+        headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
 
-    return stories_with_epics
+    # prompt_content = (
+    # "You are a helpful assistant capable of generating user stories and suggesting epics from a given objective.\n"
+    # "Given the objective or a goal: '{objective}', generate distinct user stories based upon the goal. For each user story, provide the following details:\n"
+    # "1. User Story: A clear and concise user story.\n"
+    # "2. Epic: The epic under which the user story falls.\n"
+    # "3. Description: Acceptance criteria for the user story.\n\n"
+    # "Please use the following format for each story:\n"
+    # "### User Story X:\n"
+    # "- User Story: As a <role>, I want to <action>, In order to <benefit>.\n"
+    # "- Epic: <epic>\n"
+    # "- Description: <description including acceptance criteria>\n\n"
+    # "When generating user stories, categorize them under relevant epics. If a user story is similar in scope or functionality to an existing epic, assign it to that epic. If it does not fit under an existing epic, create a new epic for it.\n"
+    # ).format(objective=objective)
 
-    
-def generate_user_stories_with_epics(objective, num_stories):
-    print(OPENAI_API_KEY)
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # Construct the prompt dynamically
     prompt_content = (
-        f"You are a helpful assistant capable of generating user stories and suggesting epics from a given objective.\n"
-        f"Given the objective: '{objective}', generate {num_stories} distinct user stories. For each user story, provide the following details:\n"
-        f"1. User Story: A clear and concise user story.\n"
-        f"2. Epic: The epic under which the user story falls.\n"
-        f"3. Description: A detailed description of the user story, including acceptance criteria.\n\n"
-        f"Please use the following format for each story:\n"
-        f"### User Story X:\n"
-        f"- User Story: <user_story>\n"
-        f"- Epic: <epic>\n"
-        f"- Description: <description including acceptance criteria>\n"
-    )
-    
+    "You are a helpful assistant tasked with generating unique user stories and suggesting epics from any project description or objective provided.\n"
+    "Given the objective or project description: '{objective}', generate distinct user stories based upon the specified goals and requirements. Each user story should comprehensively address both the functional and technical aspects relevant to the project, ensuring uniqueness and avoiding duplication.\n"
+    "For each user story, provide the following details:\n"
+    "1. User Story: A clear and concise description that encapsulates a specific need or problem. Example: 'As a <role>, I want to <action>, in order to <benefit>'. Each story should be tailored to distinct functionalities or features identified in the project’s description.\n"
+    "2. Epic: The epic under which the user story falls. Each epic should cover a broad thematic area that may include multiple user stories sharing a similar scope or functionality. Epics help organize user stories into manageable groups.\n"
+    "3. Description: Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete.\n"
+    "4. Sub-tasks: Include sub-tasks only if they are essential to the implementation of the user story. If sub-tasks are not necessary, this section can be left blank. Describe only general steps or tasks necessary to achieve the user story when included.\n\n"
+    "Please use the following format for each story:\n"
+    "### User Story X:\n"
+    "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
+    "- Epic: <epic>\n"
+    "- Description: Detailed and clear acceptance criteria that define the success of the user story.\n"
+    "- Sub-tasks:\n"
+    "  1. <Sub-task 1> - General description of an essential action or task (if applicable).\n"
+    "  2. <Sub-task 2> - Another necessary step for achieving the objectives of the user story (if applicable).\n"
+    "  3. <Sub-task 3> - Further actions required to complete the user story (if applicable).\n"
+    "  ...\n\n"
+    "When generating user stories, ensure they are clearly categorized under relevant epics based on the overarching themes or functionalities identified in the project description. This structure promotes organizational clarity and aids in efficient project management and implementation.\n"
+    ).format(objective=objective)
+
+
+
     # Prepare the data for the POST request to OpenAI using the Chat API format
     post_data = json.dumps({
         "model": model,
@@ -230,7 +327,7 @@ def generate_user_stories_with_epics(objective, num_stories):
         "temperature": 0.7
     })
 
-    response = requests.post(OPENAI_URL, headers=headers, data=post_data)
+    response = requests.post(url, data=post_data, headers=headers)
     
     if response.status_code == 200:
         response_data = response.json()
@@ -243,12 +340,12 @@ def generate_user_stories_with_epics(objective, num_stories):
         raise Exception("Failed to process the request with OpenAI: " + response.text)
 
 def parse_user_stories(text_response):
-    # Adjusted pattern to match the structured numbered list format
+    # Adjusted pattern to match the structured numbered list format, including the last line without a newline
     pattern = re.compile(
         r"### User Story \d+:\n"
         r"- User Story: (.*?)\n"
         r"- Epic: (.*?)\n"
-        r"- Description: (.*?)\n",
+        r"- Description: (.*?)(?=\n### User Story \d+:|\Z)",
         re.DOTALL
     )
 

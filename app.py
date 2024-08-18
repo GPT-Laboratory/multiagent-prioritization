@@ -23,17 +23,20 @@ from helpers import (
     construct_context_prompt, construct_batch_100_dollar_prompt, parse_100_dollar_response,
     validate_dollar_distribution, enrich_stories_with_dollar_distribution,
     construct_stories_formatted, ensure_unique_keys, estimate_wsjf, estimate_moscow, 
-    save_uploaded_file, parse_csv_to_json, estimate_kano, estimate_ahp
+    save_uploaded_file, parse_csv_to_json, estimate_kano, estimate_ahp, send_to_llm
 )
 
 from agent import (
     prioritize_stories_with_ahp, categorize_stories_with_moscow,
-    generate_stories_with_dynamic_epics, generate_user_stories_with_epics,
-    prioritize_stories_with_100_dollar_method
+    generate_user_stories_with_epics,
+    prioritize_stories_with_100_dollar_method, OPENAI_URL, check_stories_with_framework
 )
 
+LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
 
 api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 4)]
+llama_keys = [os.getenv(f"LLAMA-key{i}") for i in range(1, 3)]
+
 
 print("API Keys:", api_keys)
 
@@ -51,11 +54,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 stories = data.get("stories")
                 model = data.get("model")
                 prioritization_type = data.get("prioritization_type").upper()  # Normalize to uppercase
-                
-                if model not in ALLOWED_MODELS:
-                    await websocket.send_json({"agentType": "error", "message": f"Model {model} is not allowed. Please select from {ALLOWED_MODELS}."})
-                    continue
-
                 await run_agents_workflow(stories, prioritization_type, model, websocket)
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
@@ -111,17 +109,18 @@ async def run_agents_workflow(stories, prioritization_type, model, websocket):
     
     # Step 4: Prioritization
     if prioritization_type == "100_DOLLAR":
-        prioritize_prompt = construct_batch_100_dollar_prompt({"stories": stories})
+        # prioritize_prompt = construct_batch_100_dollar_prompt({"stories": stories}, topic_response, context_response)
+        prioritize_prompt = construct_batch_100_dollar_prompt({"stories": stories}, topic_response, context_response )
         prioritized_stories = await engage_agents_in_prioritization(prioritize_prompt, stories, websocket, model)
         print("Final 100 dollar", prioritized_stories)
     elif prioritization_type == "WSJF":
-        prioritized_stories = await estimate_wsjf(stories, websocket, model)
+        prioritized_stories = await estimate_wsjf(stories, websocket, model, topic_response, context_response)
     elif prioritization_type == "MOSCOW":
-        prioritized_stories = await estimate_moscow(stories, websocket, model)
+        prioritized_stories = await estimate_moscow(stories, websocket, model, topic_response, context_response)
     elif prioritization_type == "KANO":
-        prioritized_stories = await estimate_kano(stories, websocket, model)
+        prioritized_stories = await estimate_kano(stories, websocket, model, topic_response, context_response)
     elif prioritization_type == "AHP":
-        prioritized_stories = await estimate_ahp({"stories": stories}, websocket, model)    
+        prioritized_stories = await estimate_ahp({"stories": stories}, websocket, model, topic_response, context_response)    
     else:
         raise ValueError(f"Unsupported prioritization type: {prioritization_type}")
 
@@ -188,66 +187,46 @@ async def engage_agents_in_prioritization(prompt, stories, websocket, model, max
 
     raise Exception("Failed to get valid response from agents after multiple attempts")
 
-async def send_to_llm(prompt, headers, model, max_retries=1):
-    for attempt in range(max_retries):
-        try:
-            post_data = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": "You are an expert in prioritization techniques."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.7
-            }
+# async def send_to_llm(prompt, headers, model, max_retries=1):
+#     for attempt in range(max_retries):
+#         try:
 
-            timeout = Timeout(60.0, connect=60.0)
-            async with AsyncClient(timeout=timeout) as client:
-                response = await client.post("https://api.openai.com/v1/chat/completions", json=post_data, headers=headers)
+#             if model.startswith("llama3") or model == "mixtral-8x7b-32768":
+#                 url = LLAMA_URL
+#                 headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
+#             else:
+#                 url = OPENAI_URL
+#                 headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+            
 
-                if response.status_code == 200:
-                    completion = response.json()
-                    return completion['choices'][0]['message']['content']
-                else:
-                    logger.error(f"Error: Received a non-200 status code: {response.status_code}")
-                    logger.error(f"Response text: {response.text}")
-        except httpx.RequestError as e:
-            logger.error(f"HTTP Request failed: {str(e)}")
-        logger.info(f"Retrying... ({attempt + 1}/{max_retries})")
+#             post_data = {
+#                 "model": model,
+#                 "messages": [
+#                     {"role": "system", "content": "You are an expert in prioritization techniques."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 "temperature": 0.7
+#             }
 
-    raise Exception("Failed to get response from OpenAI after multiple attempts")
+#             timeout = Timeout(60.0, connect=60.0)
+#             async with AsyncClient(timeout=timeout) as client:
+#                 response = await client.post(url, json=post_data, headers=headers)
 
+#                 if response.status_code == 200:
+#                     completion = response.json()
+#                     return completion['choices'][0]['message']['content']
+#                 else:
+#                     logger.error(f"Error: Received a non-200 status code: {response.status_code}")
+#                     logger.error(f"Response text: {response.text}")
+#         except httpx.RequestError as e:
+#             logger.error(f"HTTP Request failed: {str(e)}")
+#         logger.info(f"Retrying... ({attempt + 1}/{max_retries})")
 
-# async def stream_response_word_by_word(websocket, response, agent_type, delay=0.6, chunk_size=25):
-#     words = response.split()
-#     current_chunk = []
-#     for word in words:
-#         current_chunk.append(word)
-#         if len(current_chunk) >= chunk_size:
-#             await websocket.send_json({
-#                 "agentType": agent_type,
-#                 "message": " ".join(current_chunk)
-#             })
-#             await asyncio.sleep(delay)  # Delay to simulate streaming effect
-#             current_chunk = []
+#     raise Exception("Failed to get response from OpenAI after multiple attempts")
 
-#     # Send any remaining words in the last chunk
-#     if current_chunk:
-#         await websocket.send_json({
-#             "agentType": agent_type,
-#             "message": " ".join(current_chunk)
-#         })
 
 async def stream_response_word_by_word(websocket, response, agent_type, delay=0.6):
-    # lines = response.split('\n')
-    # for line in lines:
-    #     if websocket.application_state != WebSocketState.DISCONNECTED:
-    #         await websocket.send_json({
-    #             "agentType": agent_type,
-    #             "message": line
-    #         })
-    #         await asyncio.sleep(delay)
-      # Delay to simulate streaming effect
-
+    
     if websocket.application_state != WebSocketState.DISCONNECTED:
         await websocket.send_json({
             "agentType": agent_type,
@@ -266,18 +245,35 @@ async def stream_response_as_complete_message(websocket: WebSocket, response: st
 async def catch_all(request):
     return FileResponse(os.path.join('dist', 'index.html'))
 
-async def generate_user_stories(request: Request, model):
+async def generate_user_stories(request: Request):
     data = await request.json()
-    if not data or 'objective' not in data or 'num_stories' not in data:
-        return JSONResponse({'error': 'Missing required data: objective and num_stories'}, status_code=400)
+    headers = {
+        "Authorization": f"Bearer {random.choice(api_keys)}",
+        "Content-Type": "application/json"
+    }
 
+    if not data or 'objective' not in data or 'model' not in data:
+        return JSONResponse({'error': 'Missing required data: objective, and model'}, status_code=400)
+    model = data['model']
     objective = data['objective']
-    num_stories = data['num_stories']
-    stories_with_epics = generate_user_stories_with_epics(objective, num_stories, model)
+    stories_with_epics = generate_user_stories_with_epics(objective, model,headers)
     return JSONResponse({"stories_with_epics": stories_with_epics})
 
 
-
+async def check_user_stories_quality(request: Request):
+    data = await request.json()
+    headers = {
+        "Authorization": f"Bearer {random.choice(api_keys)}",
+        "Content-Type": "application/json"
+    }
+    if not data or 'framework' not in data or 'stories' not in data or 'model' not in data:
+        return JSONResponse({'error': 'Missing required data: framework, stories, and model'}, status_code=400)
+    
+    model = data['model']
+    framework = data['framework']
+    stories = data['stories']
+    stories_with_epics = check_stories_with_framework(framework, stories, model, headers)
+    return JSONResponse({"stories_with_epics": stories_with_epics})
 
 async def upload_csv(request: Request):
     form = await request.form()
@@ -302,11 +298,12 @@ app = Starlette(debug=True, middleware=[
 ], routes=[
     Route('/api/generate-user-stories', generate_user_stories, methods=['POST']),
     Route('/api/upload-csv', upload_csv, methods=['POST']),
+    Route('/api/check-user-stories-quality', check_user_stories_quality, methods=['POST']),
     WebSocketRoute("/api/ws-chat", websocket_endpoint),
     Mount('/', StaticFiles(directory='dist', html=True), name='static')
 ])
 
-ALLOWED_MODELS = ["gpt-3.5-turbo", "gpt-4o"]
+
 
 
 if __name__ == "__main__":

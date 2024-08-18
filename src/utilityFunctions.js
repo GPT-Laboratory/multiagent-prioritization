@@ -18,10 +18,10 @@ export const getChatMessageClass = (agentType) => {
     }
   };
 
- export const handleSuccessResponse = (prioritizationTechnique) => {
+ export const handleSuccessResponse = (prioritizationTechnique, selectModel) => {
     // Check if browser supports speech synthesis
     if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(`Agents Chatting about ${prioritizationTechnique} in Process`);
+      const utterance = new SpeechSynthesisUtterance(`Agents Chatting about ${prioritizationTechnique} technique using ${selectModel} model in Process`);
       window.speechSynthesis.speak(utterance);
     } else {
       console.log('Text-to-speech not supported.');
