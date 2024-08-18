@@ -39,6 +39,8 @@ Multiagent-prioritization is a project designed to prioritize user stories gener
 API-KEY1=YOUR_API_KEY 1  
 API-KEY2=YOUR_API_KEY 2
 API-KEY3YOUR_API_KEY 3
+LLAMA-key1=
+LLAMA-key2=
 ```
 
 Must add this env file in the .gitignore file before pushing the code in your repository
