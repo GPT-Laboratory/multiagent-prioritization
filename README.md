@@ -91,8 +91,13 @@ WebSockets are used to facilitate real-time communication between the client and
 The CSV file is attached to upload and test it. 
 [backlog_requirements_with_ai.csv](https://github.com/user-attachments/files/15751077/backlog_requirements_with_ai.csv)
 
-Results 
-![Architecture Diagram](https://github.com/GPT-Laboratory/multiagent-prioritization/raw/main/Datasets_And_results/Architecture.jpeg)
+Architecture and Results 
+<table>
+  <tr>
+    <td><img src="https://github.com/GPT-Laboratory/multiagent-prioritization/raw/main/Datasets_And_results/Architecture.jpeg" alt="Architecture Diagram" width="400"/></td>
+    <td><img src="https://github.com/GPT-Laboratory/multiagent-prioritization/raw/main/Datasets_And_results/all4ProjectStoriesResults.png" alt="Project Stories Results" width="400"/></td>
+  </tr>
+</table>
 
 
 ## Demo Video
