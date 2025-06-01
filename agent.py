@@ -7,9 +7,10 @@ import json
 
 OPENAI_API_KEY = os.getenv("API-KEY1")
 LLAMA_API_KEY = os.getenv("LLAMA-key1")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
-
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Load environment variables from .env file
 api_keys = [os.getenv(f"API-KEY{i}") for i in range(1, 4)]
@@ -58,13 +59,20 @@ def generate_check_stories_prompt(stories, framework):
 
 def check_stories_with_framework(stories, framework, model, headers):
     prompt = generate_check_stories_prompt(stories, framework)
+    headers = headers.copy()
 
-    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+    if model == "llama-3.3-70b-versatile" or model == "mixtral-8x7b-32768":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    elif model == "deepseek/deepseek-chat-v3-0324:free" or model == "mistralai/mistral-nemo":
+        url = OPENROUTER_URL
+        headers["Authorization"] = f"Bearer {OPENROUTER_API_KEY}"
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
+
+    headers["Content-Type"] = "application/json"
+
 
     # headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
     post_data = {
@@ -272,55 +280,19 @@ def parse_moscow_categorized_stories(completion_text):
     
 def generate_user_stories_with_epics( vision, mvp, model, headers):
 
-    if model == "llama3-70b-8192" or model == "mixtral-8x7b-32768":
+    headers = headers.copy()
+
+    if model == "llama-3.3-70b-versatile" or model == "mixtral-8x7b-32768":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {LLAMA_API_KEY}"
+    elif model == "deepseek/deepseek-chat-v3-0324:free" or model == "mistralai/mistral-nemo":
+        url = OPENROUTER_URL
+        headers["Authorization"] = f"Bearer {OPENROUTER_API_KEY}"
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
 
-
-    # prompt_content = (
-    # "You are a helpful assistant tasked with generating unique user stories and suggesting epics from any project description or objective provided.\n"
-    # "Given the objective or project description: '{objective}', generate distinct user stories based upon the specified goals and requirements. Each user story should comprehensively address both the functional and technical aspects relevant to the project, ensuring uniqueness and avoiding duplication.\n"
-    # "For each user story, provide the following details:\n"
-    # "1. User Story: A clear and concise description that encapsulates a specific need or problem. Example: 'As a <role>, I want to <action>, in order to <benefit>'. Each story should be tailored to distinct functionalities or features identified in the project’s description.\n"
-    # "2. Epic: The epic under which the user story falls. Each epic should cover a broad thematic area that may include multiple user stories sharing a similar scope or functionality. Epics help organize user stories into manageable groups.\n"
-    # "3. Description: Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete.\n"
-    # "4. Sub-tasks: Include sub-tasks only if they are essential to the implementation of the user story. If sub-tasks are not necessary, this section can be left blank. Describe only general steps or tasks necessary to achieve the user story when included.\n\n"
-    # "Please use the following format for each story:\n"
-    # "### User Story X:\n"
-    # "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
-    # "- Epic: <epic>\n"
-    # "- Description: Detailed and clear acceptance criteria that define the success of the user story.\n"
-    # "- Sub-tasks:\n"
-    # "  1. <Sub-task 1> - General description of an essential action or task (if applicable).\n"
-    # "  2. <Sub-task 2> - Another necessary step for achieving the objectives of the user story (if applicable).\n"
-    # "  3. <Sub-task 3> - Further actions required to complete the user story (if applicable).\n"
-    # "  ...\n\n"
-    # "When generating user stories, ensure they are clearly categorized under relevant epics based on the overarching themes or functionalities identified in the project description. This structure promotes organizational clarity and aids in efficient project management and implementation.\n"
-    # ).format(objective=objective)
-
-#     prompt_content = (
-#     "You are a helpful assistant tasked with generating unique user stories and grouping them under relevant epics based on any project vision or MVP goal provided.\n"
-#     "Given the project vision: '{vision}' and MVP goals: '{mvp}', generate distinct user stories that align with these core elements. Ensure each story comprehensively addresses both functional and technical aspects relevant to the project, with a focus on supporting the project's primary vision and achieving a functional MVP.\n"
-#     "For each user story, provide the following details:\n"
-#     "1. User Story: A clear and concise description that encapsulates a specific need or problem. Example: 'As a <role>, I want to <action>, in order to <benefit>'. Each story should directly support the project's vision or contribute towards a functional MVP.\n"
-#     "2. Epic: The broad epic under which the user story falls. Each epic should cover a thematic area and can encompass multiple related user stories that share a similar scope or functionality. This structure helps organize user stories into meaningful groups that align with the project's vision.\n"
-#     "3. Description: Detailed acceptance criteria for the user story, specifying what success looks like for the story to be considered complete, particularly in terms of MVP completion and alignment with the vision.\n"
-#     "4. Sub-tasks: Include sub-tasks only if they are essential to the implementation of the user story. If sub-tasks are not necessary, this section can be left blank. Describe only general steps or tasks necessary to achieve the user story when included.\n\n"
-#     "Please use the following format for each story:\n"
-#     "### User Story X:\n"
-#     "- User Story: As a <role>, I want to <action>, in order to <benefit>.\n"
-#     "- Epic: <epic> (Note: This epic may encompass multiple related user stories)\n"
-#     "- Description: Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision.\n"
-#     "- Sub-tasks:\n"
-#     "  1. <Sub-task 1> - General description of an essential action or task (if applicable).\n"
-#     "  2. <Sub-task 2> - Another necessary step for achieving the objectives of the user story (if applicable).\n"
-#     "  3. <Sub-task 3> - Further actions required to complete the user story (if applicable).\n"
-#     "  ...\n\n"
-#     "When generating user stories, ensure they are grouped under relevant epics based on the overarching themes, functionalities, or MVP goals identified. This structure promotes organizational clarity, supports efficient project management, and aligns with the project's vision and MVP goals."
-# ).format(vision=vision, mvp=mvp)
+    headers["Content-Type"] = "application/json"
 
     prompt_content = (
     "You are a helpful assistant tasked with generating unique user stories and grouping them under relevant epics based on any project vision or MVP goal provided.\n"
@@ -342,10 +314,6 @@ def generate_user_stories_with_epics( vision, mvp, model, headers):
     "- Epic: <epic> (This epic may encompass multiple related user stories)\n"
     "- Description: Detailed and clear acceptance criteria that define the success of the user story, particularly in achieving MVP functionality and supporting the overall vision.\n"
 ).format(vision=vision, mvp=mvp)
-
-    
-
-
 
     # Prepare the data for the POST request to OpenAI using the Chat API format
     post_data = json.dumps({

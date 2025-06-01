@@ -16,6 +16,10 @@ import pdfplumber
 
 from agent import OPENAI_URL
 LLAMA_URL="https://api.groq.com/openai/v1/chat/completions"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") 
+
 
 # from app import send_to_llm
 
@@ -120,12 +124,18 @@ def construct_ahp_prompt(data, topic_response, context_response):
 
 
 async def send_to_llm(prompt, headers, model, timeout=100):
-    if model.startswith("llama3") or model == "mixtral-8x7b-32768":
+    headers = headers.copy()
+    if model.startswith("llama-3.3") or model == "mixtral-8x7b-32768":
         url = LLAMA_URL
         headers["Authorization"] = f"Bearer {random.choice(llama_keys)}"
+    elif model == "deepseek/deepseek-chat-v3-0324:free" or model == "mistralai/mistral-nemo":
+        url = OPENROUTER_URL
+        headers["Authorization"] = f"Bearer {OPENROUTER_API_KEY}"
     else:
         url = OPENAI_URL
         headers["Authorization"] = f"Bearer {random.choice(api_keys)}"
+
+    headers["Content-Type"] = "application/json"
     
     post_data = {
         "model": model,

@@ -27,14 +27,14 @@ Multiagent-prioritization is a project designed to prioritize user stories gener
 
 2. Install the required dependencies:
     ```bash
-    pip install -r requirements.txt or  pip install starlette uvicorn httpx python-dotenv streamlit python-multipart
+    pip install -r requirements.txt or  pip install starlette uvicorn httpx python-dotenv streamlit python-multipart uvicorn[standard] pdfplumber 
     ```
 3: NOTE: npm i to instal the packages, if you want to change in the front end, can use npm run build or can run live frontend server using npm run dev
    Can use dist folder 
 
 ## Empirical Datasets
 
-The empirical datasets used in the Profes paper, which served as a foundation for this project, are available [here](https://github.com/GPT-Laboratory/multiagent-prioritization/tree/main/Datasets_And_results). These datasets are crucial for testing and validating the prioritization techniques implemented in this project.
+The empirical datasets used in the SEAA_2025 paper, which served as a foundation for this project, are available [here](https://github.com/GPT-Laboratory/multiagent-prioritization/tree/main/Datasets_And_results). These datasets are for testing and validating the prioritization results implemented in this project.
 
 ## Llama 3 Integration
 
@@ -42,13 +42,15 @@ For Llama 3 model integration, we utilize GroqCloud. Detailed instructions for g
 
 ## Create .env file and placed in root directory 
 
-### Write your OPENAI API's key minimum 3 and 2 groqcloud api, to avoid API error for multi async calls.
+### Write your OPENAI API's key minimum 3 and 2 groqcloud api and openrouter api for Mistral Nemo, to avoid API error for multi async calls.
 ```bash
 API-KEY1=YOUR_API_KEY 1  
 API-KEY2=YOUR_API_KEY 2
 API-KEY3YOUR_API_KEY 3
 LLAMA-key1=
 LLAMA-key2=
+OPENROUTER_API_KEY=
+
 ```
 
 Must add this env file in the .gitignore file before pushing the code in your repository

@@ -8,9 +8,11 @@
 # testing
 /coverage
 
+
 # production
 /build
 /pri
+/old
 # misc
 .DS_Store
 .env.local
@@ -26,4 +28,5 @@ package-lock.json
 *.env
 *summary.tex
 finish-sami_key.pem
+
 

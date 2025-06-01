@@ -253,54 +253,54 @@ function App() {
 
   const handleVisionFileChange = (e) => {
     // console.log(e.target.files);
-    
+
     setVisionFile(e.target.files[0])
   }
 
   const handleGenerateStoriesByFiles = async (e) => {
     e.preventDefault();
     console.log(visionFile);
-    
+
     // Check if both vision and mvp files are provided
-    
-    
+
+
     try {
       setLoading(true);
-  
+
       // Create a FormData object to handle file uploads
       const formData = new FormData();
-      
+
       // Append vision and mvp files to FormData
       formData.append('vision_file', visionFile); // vision_file should match backend field
       formData.append('mvp_file', mvpFile); // mvp_file should match backend field
-      
+
       // Append the selected model
       formData.append('model', selectModel); // 'model' should match the Form field in the backend
-  
+
       const response = await fetch("/api/generate-user-stories-by-files", {
         method: "POST",
         body: formData,  // No need for headers as FormData will set the necessary headers automatically
       });
-  
+
       if (!response.ok) {
         throw new Error("Failed to generate stories");
       }
-  
+
       const message = await response.json();
-      
+
       let dataResponse = message.stories_with_epics.map((i, index) => ({
         ...i,
         key: index,
       }));
-  
+
       setResult1(dataResponse);
       console.log(dataResponse);
-  
+
       setLoading(false);
       notification.success({
         message: "User stories generated",
       });
-      
+
     } catch (error) {
       console.error("Error submitting data:", error);
       setLoading(false);
@@ -309,15 +309,15 @@ function App() {
       });
     }
   };
-  
+
 
   const handleGenerateStories = async (e) => {
-    console.log('vision text: ',textBox.vision);
+    console.log('vision text: ', textBox.vision);
     console.log('mvp text:');
 
     console.log(textBox.mvp);
 
-    
+
     e.preventDefault();
     try {
       setLoading(true);
@@ -599,14 +599,14 @@ function App() {
                   finalPrioritizationType === "WSJF"
                     ? wsjfColumns
                     : finalPrioritizationType === "MOSCOW"
-                    ? moscowColumns
-                    : finalPrioritizationType === "100_DOLLAR"
-                    ? finalOutputColumns
-                    : finalPrioritizationType === "KANO"
-                    ? kanoColumns
-                    : finalPrioritizationType === "AHP"
-                    ? ahpColumns
-                    : ""
+                      ? moscowColumns
+                      : finalPrioritizationType === "100_DOLLAR"
+                        ? finalOutputColumns
+                        : finalPrioritizationType === "KANO"
+                          ? kanoColumns
+                          : finalPrioritizationType === "AHP"
+                            ? ahpColumns
+                            : ""
                 }
                 pagination={false}
                 scroll={{ x: 1200, y: 500 }}
@@ -829,9 +829,9 @@ function App() {
                                 rows={13}
                                 placeholder="Enter your objective"
                                 value={textBox.mvp}
-                                onChange={(e) => setName({...textBox, mvp:e.target.value})}
+                                onChange={(e) => setName({ ...textBox, mvp: e.target.value })}
                                 style={{ color: "black" }}
-                                // autoSize={{ minRows: 2 }}
+                              // autoSize={{ minRows: 2 }}
                               />
                             </Form.Item>
                             <Form.Item
@@ -854,8 +854,16 @@ function App() {
                                     label: "gpt-4o",
                                   },
                                   {
-                                    value: "llama3-70b-8192",
-                                    label: "LLama3-70 Billion",
+                                    value: "llama-3.3-70b-versatile",
+                                    label: "llama-3.3-70b",
+                                  },
+                                  {
+                                    value: "mistralai/mistral-nemo",
+                                    label: "mistral-nemo",
+                                  },
+                                  {
+                                    value: "deepseek/deepseek-chat-v3-0324:free",
+                                    label: "deepseek-chat-v3",
                                   },
                                   {
                                     value: "mixtral-8x7b-32768",
@@ -926,8 +934,16 @@ function App() {
                                     label: "gpt-4o",
                                   },
                                   {
-                                    value: "llama3-70b-8192",
-                                    label: "LLama3-70 Billion",
+                                    value: "llama-3.3-70b-versatile",
+                                    label: "llama-3.3-70b",
+                                  },
+                                  {
+                                    value: "mistralai/mistral-nemo",
+                                    label: "mistral-nemo",
+                                  },
+                                  {
+                                    value: "deepseek/deepseek-chat-v3-0324:free",
+                                    label: "deepseek-chat-v3",
                                   },
                                   {
                                     value: "mixtral-8x7b-32768",
@@ -1056,125 +1072,6 @@ function App() {
                     </Space>
                   </div>
                 )}
-                {/* {result1.length > 0 &&(
-                  <div
-                  style={{
-                    width: "100%",
-                    border: "1px solid #ccc",
-                    padding: 10,
-                    margin: "10px 0px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  <Form
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: 'center',
-                      justifyContent: "end",
-                    }}
-                  >
-                    <Form.Item
-                      label=""
-                      style={{ marginLeft: "10px", marginRight: "10px" , display: 'flex', alignItems:'end', alignSelf:'center' }}
-                    >
-                      <div style={{display: 'flex', alignItems:'center',}} >
-                        <h5>Select Framework</h5>
-                        <div style={{marginLeft:'10px'}}>
-                      <Select
-                        placeholder="Select Framework"
-                        optionFilterProp="children"
-                        onChange={handleframe}
-                        value={frameWork}
-                        defaultValue="INVEST framework"
-                        options={[
-                          {
-                            value: "INVEST framework",
-                            label: "INVEST framework",
-                          },
-                          {
-                            value: "ISO/IEC/IEEE 29148-2011",
-                            label: "ISO/IEC/IEEE 29148-2011"
-                          }
-                        ]}
-                      />
-                      </div>
-                      </div>
-                      
-
-                    </Form.Item>
-                    <Form.Item style={{marginRight: "10px"}}>
-                      <div style={{display:"flex", alignItems:'center'}}>
-                        <h5 style={{marginRight:'10px'}}>Select Model</h5>
-                        <div>
-                        <Select
-                          placeholder="Select Model"
-                          optionFilterProp="children"
-                          onChange={handleModel}
-                          value={selectModel}
-                          defaultValue="gpt-3.5-turbo"
-                          options={[
-                            {
-                              value: "gpt-3.5-turbo",
-                              label: "GPT-3.5 Turbo",
-                            },
-                            {
-                              value: "gpt-4o",
-                              label: "GPT-4 Omni",
-                            },
-                            {
-                              value: "llama3-70b-8192",
-                              label: "LLama3-70 Billion",
-                            },
-                            {
-                              value: "mixtral-8x7b-32768",
-                              label: "Mixtral-8x7b",
-                            },
-                          ]}
-                        />
-                        </div>
-                      </div>
-                    
-                    </Form.Item>
-                    <Form.Item style={{ display: "flex", alignItems: "end" }}>
-                      <Button
-                        type="primary"
-                        icon={<SearchOutlined />}
-                        onClick={handleFrameWork}
-                        disabled={frameWork === null}
-                      >
-                        Check Compliance
-                      </Button>
-                    </Form.Item>
-                  </Form>
-                </div>
-                )} */}
-
-                {/* {result1.length > 0 &&(
-                  <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    border: "1px solid #ccc",
-                    padding: 10,
-                    borderRadius: "10px",
-                    marginBottom: 5,
-                  }}
-                >
-                  <Space
-                    direction="vertical"
-                    style={{ width: "100%", padding: "10px 0px" }}
-                  >
-                    <Table
-                      scroll={{ x: 1200, y: 500 }}
-                      style={{ width: "100%" }}
-                      dataSource={frameWorkResult}
-                      columns={frameworkColumns}
-                      pagination={false}
-                    />
-                  </Space>
-                </div>
-                )} */}
 
                 {result1.length > 0 && (
                   <div
@@ -1190,19 +1087,19 @@ function App() {
                       style={{
                         width: "100%",
                         display: "flex",
-                        alignItems:'center',
+                        alignItems: 'center',
                         justifyContent: "end",
                       }}
                     >
-                      <Form.Item label="Feedback" style={{width:'63%', marginRight:'20px'}}>
+                      <Form.Item label="Feedback" style={{ width: '63%', marginRight: '20px' }}>
                         <TextArea
-                                rows={2}
-                                placeholder="Enter your feedback"
-                                value={feedback}
-                                onChange={(e) => setFeedBack(e.target.value)}
-                                style={{ color: "black" }}
-                                // autoSize={{ minRows: 2 }}
-                              />
+                          rows={2}
+                          placeholder="Enter your feedback"
+                          value={feedback}
+                          onChange={(e) => setFeedBack(e.target.value)}
+                          style={{ color: "black" }}
+                        // autoSize={{ minRows: 2 }}
+                        />
                       </Form.Item>
 
                       <Form.Item label="Prioritization Technique">
@@ -1234,8 +1131,16 @@ function App() {
                               label: "GPT-4 Omni",
                             },
                             {
-                              value: "llama3-70b-8192",
-                              label: "LLama3-70 Billion",
+                              value: "llama-3.3-70b-versatile",
+                              label: "llama-3.3-70b",
+                            },
+                            {
+                              value: "mistralai/mistral-nemo",
+                              label: "mistral-nemo",
+                            },
+                            {
+                              value: "deepseek/deepseek-chat-v3-0324:free",
+                              label: "deepseek-chat-v3",
                             },
                             {
                               value: "mixtral-8x7b-32768",
@@ -1244,7 +1149,7 @@ function App() {
                           ]}
                         />
                       </Form.Item>
-                      <Form.Item style={{ display: "flex", alignItems: "end", marginTop:'25px' }}>
+                      <Form.Item style={{ display: "flex", alignItems: "end", marginTop: '25px' }}>
                         <Button
                           type="primary"
                           icon={<SearchOutlined />}
