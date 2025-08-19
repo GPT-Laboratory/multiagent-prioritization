@@ -95,7 +95,8 @@ The CSV file is attached to upload and test it.
 
 ## Demo Video
 
-[![Watch the video](https://img.youtube.com/vi/CIKOFt-Vr1k/maxresdefault.jpg)](https://youtu.be/CIKOFt-Vr1k)
+[![Watch the video](https://img.youtube.com/vi/GYUtrQKKvxU/hqdefault.jpg)](https://youtu.be/GYUtrQKKvxU)
+
 
 
 
